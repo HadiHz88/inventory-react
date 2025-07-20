@@ -77,6 +77,7 @@ src/
       productSlice.ts
       productThunks.ts
       productSelectors.ts
+      productApi.ts
   hooks/
     redux.ts
   services/
@@ -98,36 +99,29 @@ This file contains all the TypeScript types related to products. Types help catc
 ```ts
 // src/features/products/productTypes.ts
 
-/**
- * Product entity type
- * Represents a single product in our application.
- */
+// Product entity type
 export interface Product {
   id: number;           // Unique identifier for the product
   name: string;         // Name of the product
   description: string;  // Description of the product
   price: number;        // Price of the product
   category: string;     // Category the product belongs to
+  stock: number;        // Stock of the product
 }
 
-/**
- * API response for fetching products
- * Used to type the response from the backend when fetching products.
- */
+// API response for fetching products
 export interface ProductResponse {
   products: Product[];  // Array of products
   total: number;        // Total number of products (for pagination, etc.)
 }
 
-/**
- * API request for creating/updating a product
- * Used to type the data sent to the backend when creating or updating a product.
- */
+// API request for creating/updating a product
 export interface ProductRequest {
   name: string;
   description: string;
   price: number;
   category: string;
+  stock: number;
 }
 ```
 
@@ -139,8 +133,9 @@ This file contains the Redux slice for products. A slice holds the state and red
 
 ```ts
 // src/features/products/productSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Product } from './productTypes';
+
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Product } from './productTypes';
 import { fetchProducts } from './productThunks';
 
 // Define the shape of the product state
@@ -198,8 +193,9 @@ This file contains all the async logic (thunks) for products. Thunks are used fo
 
 ```ts
 // src/features/products/productThunks.ts
+
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { Product } from './productTypes';
+import type { Product } from './productTypes';
 import api from '../../services/api';
 
 /**
@@ -234,8 +230,9 @@ Selectors are functions that extract and return specific pieces of data from the
 
 ```ts
 // src/features/products/productSelectors.ts
-import { RootState } from '../../store';
-import { Product } from './productTypes';
+
+import type { RootState } from '../../store';
+import type { Product } from './productTypes';
 
 /**
  * Select all products from the state
@@ -246,7 +243,7 @@ export const selectAllProducts = (state: RootState): Product[] => state.products
  * Select products by category
  */
 export const selectProductsByCategory = (category: string) => (state: RootState): Product[] =>
-  state.products.products.filter((product) => product.category === category);
+  state.products.products.filter((product: Product) => product.category === category);
 
 /**
  * Select loading state
@@ -265,17 +262,88 @@ export const selectProductsError = (state: RootState): string | null => state.pr
 
 ---
 
-### 5. API Service (`src/services/api.ts`)
+### 5. Product API (`src/features/products/productApi.ts`)
+
+This file defines the RTK Query API slice for products, including endpoints for fetching, adding, and deleting products. It generates hooks for use in your components.
+
+```ts
+// src/features/products/productApi.ts
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { Product, ProductRequest } from './productTypes';
+
+export const productApi = createApi({
+  reducerPath: 'productApi',
+  baseQuery: fetchBaseQuery({ baseUrl: 'https://fakestoreapi.com' }),
+  tagTypes: ['Product'], // Used for cache invalidation
+  endpoints: (builder) => ({
+    // Query: Fetch all products
+    getProducts: builder.query<Product[], void>({
+      query: () => '/products',
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Product' as const, id })),
+              { type: 'Product', id: 'LIST' },
+            ]
+          : [{ type: 'Product', id: 'LIST' }],
+    }),
+    // Query: Fetch a single product by ID
+    getProductById: builder.query<Product, number>({
+      query: (id) => `/products/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Product', id }],
+    }),
+    // Mutation: Add a new product
+    addProduct: builder.mutation<Product, ProductRequest>({
+      query: (newProduct) => ({
+        url: '/products',
+        method: 'POST',
+        body: newProduct,
+      }),
+      invalidatesTags: [{ type: 'Product', id: 'LIST' }], // Invalidate product list cache
+    }),
+    // Mutation: Delete a product
+    deleteProduct: builder.mutation<{ success: boolean; id: number }, number>({
+      query: (id) => ({
+        url: `/products/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'Product', id },
+        { type: 'Product', id: 'LIST' },
+      ],
+    }),
+    // You can add more mutations (update, etc.) as needed
+  }),
+});
+
+// Export hooks for usage in functional components
+export const {
+  useGetProductsQuery,
+  useGetProductByIdQuery,
+  useAddProductMutation,
+  useDeleteProductMutation,
+} = productApi;
+```
+
+**Explanation:**
+- This file centralizes all product-related API logic using RTK Query.
+- It generates hooks for fetching, adding, and deleting products, and handles caching and invalidation automatically.
+
+---
+
+### 6. API Service (`src/services/api.ts`)
 
 This file creates a centralized Axios instance for making HTTP requests. Using a shared instance makes it easy to set base URLs, headers, and interceptors for all API calls in your app.
 
 ```ts
 // src/services/api.ts
+
 import axios from 'axios';
 
 // Create an Axios instance with default settings
 const api = axios.create({
-  baseURL: 'https://fakestoreapi.com', // Base URL for all API requests
+  baseURL: 'https://blablabla.com', // Base URL for all API requests
   timeout: 10000,                      // Request timeout (ms)
   headers: {
     'Content-Type': 'application/json',
@@ -290,7 +358,7 @@ export default api;
 
 ---
 
-### 6. Typed Redux Hooks (`src/hooks/redux.ts`)
+### 7. Typed Redux Hooks (`src/hooks/redux.ts`)
 
 This file provides custom hooks for using Redux in your components, with full TypeScript support. This ensures you get type safety and autocompletion everywhere you use Redux.
 
@@ -309,7 +377,7 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 ---
 
-### 7. Store Setup
+### 8. Store Setup
 
 #### Root Reducers (`src/store/rootReducers.ts`)
 
@@ -376,7 +444,7 @@ export type AppDispatch = typeof store.dispatch;
 
 ---
 
-### 8. Provide the Store to React
+### 9. Provide the Store to React
 
 This step makes the Redux store available to your entire React app. You only need to do this once, at the root of your app.
 
@@ -403,7 +471,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 ---
 
-### 9. Using Selectors in a Component
+### 10. Using Selectors in a Component
 
 Here’s how you can use selectors in your components to access and display filtered data from the Redux store.
 
@@ -449,150 +517,9 @@ export default ProductList;
 - The component uses selectors to access the Redux state, making the code cleaner and more maintainable.
 - You can easily filter products by category or get all products, and handle loading and error states with dedicated selectors.
 
-### 10. Extra
-
-You can always include additional, more advanced patterns such as using [Reselect](https://github.com/reduxjs/reselect) for memoized selectors or other memoization techniques to optimize performance, especially when working with derived or computed data from your Redux state.
-
-## Working with RTK Query
-
-RTK Query is a powerful data fetching and caching tool that comes built-in with Redux Toolkit. It helps you manage server-side data in your application with minimal boilerplate, handling fetching, caching, updating, and even background refetching out of the box.
-
-### What is RTK Query?
-
-RTK Query is a data fetching and caching solution for Redux applications. It is designed to simplify data fetching logic, reduce the need for manual thunks and reducers, and provide automatic caching, invalidation, and refetching of data.
-
-**Key Benefits:**
-- Eliminates the need to write thunks, reducers, and actions for most server interactions
-- Handles caching, background updates, and cache invalidation automatically
-- Integrates seamlessly with Redux Toolkit and TypeScript
-- Reduces boilerplate and improves maintainability
-
 ---
 
-### RTK Query Concepts
-
-- **API Slice:** Central place to define endpoints (queries and mutations) for your backend.
-- **Query:** Used to fetch data (GET requests). RTK Query generates hooks for you to use in components.
-- **Mutation:** Used to create, update, or delete data (POST, PUT, DELETE requests). Also generates hooks.
-- **Caching:** RTK Query automatically caches fetched data and shares it across components.
-- **Invalidation:** You can mark data as "stale" after a mutation, so queries refetch fresh data.
-- **Auto-Refetching:** RTK Query can refetch data in the background when you re-focus a window or reconnect to the internet.
-- **Loading/Error/Success States:** Hooks provide easy access to loading, error, and success states for UI feedback.
-
----
-
-### 1. Install RTK Query
-
-RTK Query is included with Redux Toolkit (v1.6+), but you also need to install `react-redux` if you haven't already:
-
-```bash
-npm install @reduxjs/toolkit react-redux
-```
-
----
-
-### 2. Create an API Slice (`src/features/products/productApi.ts`)
-
-An API slice defines endpoints and how to fetch or mutate data from your backend. RTK Query generates hooks for you to use in your components.
-
-```ts
-// src/features/products/productApi.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { Product, ProductRequest } from './productTypes';
-
-export const productApi = createApi({
-  reducerPath: 'productApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://fakestoreapi.com' }),
-  tagTypes: ['Product'], // Used for cache invalidation
-  endpoints: (builder) => ({
-    // Query: Fetch all products
-    getProducts: builder.query<Product[], void>({
-      query: () => '/products',
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map(({ id }) => ({ type: 'Product' as const, id })),
-              { type: 'Product', id: 'LIST' },
-            ]
-          : [{ type: 'Product', id: 'LIST' }],
-    }),
-    // Query: Fetch a single product by ID
-    getProductById: builder.query<Product, number>({
-      query: (id) => `/products/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Product', id }],
-    }),
-    // Mutation: Add a new product
-    addProduct: builder.mutation<Product, ProductRequest>({
-      query: (newProduct) => ({
-        url: '/products',
-        method: 'POST',
-        body: newProduct,
-      }),
-      invalidatesTags: [{ type: 'Product', id: 'LIST' }], // Invalidate product list cache
-    }),
-    // Mutation: Delete a product
-    deleteProduct: builder.mutation<{ success: boolean; id: number }, number>({
-      query: (id) => ({
-        url: `/products/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: (result, error, id) => [
-        { type: 'Product', id },
-        { type: 'Product', id: 'LIST' },
-      ],
-    }),
-    // You can add more mutations (update, etc.) as needed
-  }),
-});
-
-// Export hooks for usage in functional components
-export const {
-  useGetProductsQuery,
-  useGetProductByIdQuery,
-  useAddProductMutation,
-  useDeleteProductMutation,
-} = productApi;
-```
-
-**Explanation:**
-- `createApi` sets up endpoints and generates hooks for data fetching and mutations.
-- `tagTypes` and `providesTags`/`invalidatesTags` are used for cache invalidation.
-- Each endpoint describes how to fetch or mutate data.
-- RTK Query automatically generates React hooks (e.g., `useGetProductsQuery`, `useAddProductMutation`).
-
----
-
-### 3. Add the API Slice to the Store
-
-You need to add the API slice’s reducer and middleware to your Redux store configuration.
-
-```ts
-// src/store/index.ts
-import { configureStore } from '@reduxjs/toolkit';
-import rootReducer from './rootReducers';
-import middleware from './middleware';
-import { productApi } from '../features/products/productApi';
-
-export const store = configureStore({
-  reducer: {
-    ...rootReducer,
-    [productApi.reducerPath]: productApi.reducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(middleware).concat(productApi.middleware),
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-```
-
-**Explanation:**
-- Add the API slice’s reducer under a unique key (`productApi.reducerPath`).
-- Add the API middleware to enable caching, invalidation, and other RTK Query features.
-
----
-
-### 4. Using RTK Query Hooks in a Component
+### 11. Using RTK Query Hooks in a Component
 
 You can now use the auto-generated hooks in your components to fetch, add, or delete products. RTK Query handles loading, error, and success states for you.
 
@@ -645,7 +572,7 @@ import { useAddProductMutation } from '../features/products/productApi';
 
 const AddProductForm: React.FC = () => {
   const [addProduct, { isLoading, isSuccess, error }] = useAddProductMutation();
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: '' });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: '', stock: '' });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -658,6 +585,7 @@ const AddProductForm: React.FC = () => {
       description: form.description,
       price: parseFloat(form.price),
       category: form.category,
+      stock: parseInt(form.stock, 10),
     });
   };
 
@@ -667,6 +595,7 @@ const AddProductForm: React.FC = () => {
       <input name="description" value={form.description} onChange={handleChange} placeholder="Description" required />
       <input name="price" value={form.price} onChange={handleChange} placeholder="Price" required type="number" />
       <input name="category" value={form.category} onChange={handleChange} placeholder="Category" required />
+      <input name="stock" value={form.stock} onChange={handleChange} placeholder="Stock" required type="number" />
       <button type="submit" disabled={isLoading}>Add Product</button>
       {isSuccess && <span>Product added!</span>}
       {error && <span>Error: {error instanceof Error ? error.message : 'Unknown error'}</span>}
@@ -684,7 +613,7 @@ export default AddProductForm;
 
 ---
 
-### 5. Cache Invalidation and Refetching
+### 12. Cache Invalidation and Refetching
 
 RTK Query automatically caches data and can invalidate or refetch it when needed:
 - Use `invalidatesTags` in mutations to mark data as stale (e.g., after adding or deleting a product).
@@ -693,7 +622,7 @@ RTK Query automatically caches data and can invalidate or refetch it when needed
 
 ---
 
-### 6. Best Practices and Tips
+### 13. Best Practices and Tips
 
 - Use `tagTypes`, `providesTags`, and `invalidatesTags` for fine-grained cache control.
 - Use the auto-generated hooks for all data fetching and mutations in your components.
