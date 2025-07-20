@@ -1,11 +1,31 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Product, ProductRequest } from './productTypes';
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { Product, ProductRequest } from "./productTypes";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
+const classifyUrl = import.meta.env.VITE_CLASSIFY_BACKEND_URL;
+
+const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
+    const request = typeof args === "string" ? { url: args } : args;
+
+    // Detect custom route
+    const isClassification = request.url.startsWith("/classify");
+    const baseUrl = isClassification ? classifyUrl : backendUrl;
+
+    // Adjust request if needed (strip /classify if used just for routing)
+    const adjustedUrl = isClassification
+        ? request.url.replace(/^\/classify/, "")
+        : request.url;
+
+    return fetchBaseQuery({ baseUrl })(
+        { ...request, url: adjustedUrl },
+        api,
+        extraOptions
+    );
+};
 
 export const productApi = createApi({
     reducerPath: "productApi",
-    baseQuery: fetchBaseQuery({ baseUrl: backendUrl }),
+    baseQuery: dynamicBaseQuery,
     tagTypes: ["Product"], // Used for cache invalidation
     endpoints: (builder) => ({
         // Query: Fetch all products
@@ -22,11 +42,13 @@ export const productApi = createApi({
                       ]
                     : [{ type: "Product", id: "LIST" }],
         }),
+
         // Query: Fetch a single product by ID
         getProductById: builder.query<Product, number>({
             query: (id) => `/products/${id}`,
             providesTags: (result, error, id) => [{ type: "Product", id }],
         }),
+
         // Mutation: Add a new product
         addProduct: builder.mutation<Product, ProductRequest>({
             query: (newProduct) => ({
@@ -36,6 +58,7 @@ export const productApi = createApi({
             }),
             invalidatesTags: [{ type: "Product", id: "LIST" }], // Invalidate product list cache
         }),
+
         // Mutation: Delete a product
         deleteProduct: builder.mutation<
             { success: boolean; id: number },
@@ -50,14 +73,55 @@ export const productApi = createApi({
                 { type: "Product", id: "LIST" },
             ],
         }),
-        // You can add more mutations (update, etc.) as needed
+
+        // Mutation: Update a product
+        updateProduct: builder.mutation<Product, Product>({
+            query: (product) => ({
+                url: `/products/${product.id}`,
+                method: "PATCH",
+                body: product,
+            }),
+            invalidatesTags: (result, error, product) => [
+                { type: "Product", id: product.id },
+                { type: "Product", id: "LIST" },
+            ],
+        }),
+
+        // Query: Fetch all product IDs that need classification
+        findUncategorized: builder.query<number[], void>({
+            query: () => ({
+                url: `products/needs-classification`,
+                method: "GET",
+            }),
+            providesTags: (result) =>
+                result
+                    ? [
+                          ...result.map((id) => ({
+                              type: "Product" as const,
+                              id,
+                          })),
+                          { type: "Product", id: "UNCATEGORIZED" },
+                      ]
+                    : [{ type: "Product", id: "UNCATEGORIZED" }],
+        }),
+
+        classifyProducts: builder.mutation<any, number[]>({
+            query: (ids) => ({
+                url: "/classify/products",
+                method: "POST",
+                body: { productIds: ids },
+            }),
+        }),
     }),
 });
 
 // Export hooks for usage in functional components
 export const {
-  useGetProductsQuery,
-  useGetProductByIdQuery,
-  useAddProductMutation,
-  useDeleteProductMutation,
+    useGetProductsQuery,
+    useGetProductByIdQuery,
+    useAddProductMutation,
+    useDeleteProductMutation,
+    useUpdateProductMutation,
+    useLazyFindUncategorizedQuery,
+    useClassifyProductsMutation,
 } = productApi;
