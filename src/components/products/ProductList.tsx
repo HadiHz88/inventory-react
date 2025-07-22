@@ -20,7 +20,14 @@ export default function ProductList() {
           <Typography variant="h6">Number of products: {products?.length}</Typography>
 
               {(products || []).length > 0 ? (
-                <Box sx={{ mt: 2, gap: 4, display: 'flex', flexWrap: 'wrap' }}>
+                <Box sx={{
+                  mt: 2,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 4,
+                  alignItems: 'stretch',
+                  justifyItems: 'center',
+                }}>
                   {(products || []).map(product => (
                     <ProductCard
                       key={product.id}
