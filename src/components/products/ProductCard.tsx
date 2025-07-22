@@ -11,21 +11,23 @@ type Props = {
 
 function ProductCard({ product, onEdit, onDelete }: Props) {
     return (
-        <Card>
-            <CardContent >
-                <Typography variant="h5" component="div">
+        <Card sx={{ width: '100%', height: '100%', minHeight: 250, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <CardContent>
+                <Typography variant="h5" component="div" sx={{ mb: 1 }}>
                     {product.name}
                 </Typography>
-                <Typography sx={{ color: 'text.secondary', mb: 1.5 }}>{product.price}</Typography>
-                <Typography variant="body2">
+                <Typography sx={{ color: 'text.secondary', mb: 1.5 }}>
+                    ${product.price.toFixed(2)}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
                     {product.description}
-                    <br />
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
                     {product.category}
                 </Typography>
             </CardContent>
             <CardActions>
                 <Button size="small">View</Button>
-                {/* Show Edit/Delete only if handlers are provided */}
                 {onEdit && (
                     <Button size="small" onClick={() => onEdit(product)}>Edit</Button>
                 )}

@@ -21,6 +21,7 @@ import {
   useLazyFindUncategorizedQuery,
   useClassifyProductsMutation
 } from '../features/products/productApi';
+import ProductList from '../components/products/ProductList';
 
 interface Product {
   id?: number;
@@ -78,6 +79,10 @@ export default function Dashboard() {
     setModalOpen(true);
   };
 
+  const handleEdit = (product: Product) => {
+    openEditModal(product);
+  };
+
   const closeModal = () => {
     setModalOpen(false);
     setEditingProduct(null);
@@ -109,10 +114,10 @@ export default function Dashboard() {
     }
   };
 
-  // Delete handler
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (product: Product) => {
+    if (!product.id) return;
     try {
-      await deleteProduct(id).unwrap();
+      await deleteProduct(product.id).unwrap();
       setNotification({ message: 'Product deleted successfully', severity: 'success' });
     } catch {
       setNotification({ message: 'Failed to delete product', severity: 'error' });
@@ -154,7 +159,6 @@ export default function Dashboard() {
             Add Product
           </Button>
         </Box>
-
         {isLoading ? (
           <Typography>Loading products...</Typography>
         ) : error ? (
@@ -162,45 +166,7 @@ export default function Dashboard() {
         ) : (
           <>
             <Typography variant="subtitle1">Total Products: {products.length}</Typography>
-            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              {products.length === 0 && <Typography>No products available.</Typography>}
-              {products.map((product) => (
-                <Paper
-                  key={product.id}
-                  sx={{
-                    p: 2,
-                    minWidth: 250,
-                    flex: '1 1 250px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  }}
-                  elevation={2}
-                >
-                  <Box>
-                    <Typography variant="h6">{product.name}</Typography>
-                    <Typography>{product.description}</Typography>
-                    <Typography>Price: ${product.price.toFixed(2)}</Typography>
-                    <Typography>Category: {product.category || 'Uncategorized'}</Typography>
-                    <Typography>Stock: {product.stock}</Typography>
-                  </Box>
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <Button size="small" variant="outlined" onClick={() => openEditModal(product)}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="outlined"
-                      onClick={() => product.id && handleDelete(product.id)}
-                      disabled={isDeleting}
-                    >
-                      Delete
-                    </Button>
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
+                <ProductList onEdit={handleEdit} onDelete={handleDelete} />
           </>
         )}
       </Paper>
