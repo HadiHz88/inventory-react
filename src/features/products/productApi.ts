@@ -46,7 +46,7 @@ export const productApi = createApi({
         // Query: Fetch a single product by ID
         getProductById: builder.query<Product, number>({
             query: (id) => `/products/${id}`,
-            providesTags: (result, error, id) => [{ type: "Product", id }],
+            providesTags: (_, __, id) => [{ type: "Product", id }],
         }),
 
         // Mutation: Add a new product
@@ -68,7 +68,7 @@ export const productApi = createApi({
                 url: `/products/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: (result, error, id) => [
+            invalidatesTags: (_, __, id) => [
                 { type: "Product", id },
                 { type: "Product", id: "LIST" },
             ],
@@ -81,7 +81,7 @@ export const productApi = createApi({
                 method: "PATCH",
                 body: product,
             }),
-            invalidatesTags: (result, error, product) => [
+            invalidatesTags: (_, __, product) => [
                 { type: "Product", id: product.id },
                 { type: "Product", id: "LIST" },
             ],

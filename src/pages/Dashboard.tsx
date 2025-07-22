@@ -42,7 +42,7 @@ export default function Dashboard() {
   // Mutation hooks
   const [addProduct, { isLoading: isAdding }] = useAddProductMutation();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
-  const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation();
+  const [deleteProduct] = useDeleteProductMutation();
   const [classifyProduct] = useClassifyProductsMutation();
 
   // Modal and form state
