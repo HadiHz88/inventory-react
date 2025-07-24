@@ -2,9 +2,10 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { Product, ProductRequest } from "./productTypes";
 
 const backendUrl =
-    import.meta.env.VITE_BACKEND_URL ||
-    `http://test-1863767629.us-east-1.elb.amazonaws.com/`;
-const classifyUrl = import.meta.env.VITE_CLASSIFY_BACKEND_URL;
+    import.meta.env.VITE_BACKEND_URL ??
+    `http://test-1863767629.us-east-1.elb.amazonaws.com`;
+const classifyUrl =
+    import.meta.env.VITE_CLASSIFY_URL ?? `http://18.215.162.98:5000`;
 
 const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
     const request = typeof args === "string" ? { url: args } : args;

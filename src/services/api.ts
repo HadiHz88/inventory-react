@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
     baseURL:
         import.meta.env.VITE_BACKEND_URL ||
-        `product-alb-899356633.us-east-1.elb.amazonaws.com`,
+        `http://product-alb-899356633.us-east-1.elb.amazonaws.com`,
     timeout: 10000, // Request timeout (ms)
     headers: {
         "Content-Type": "application/json",
