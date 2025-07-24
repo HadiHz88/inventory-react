@@ -3,7 +3,7 @@ import type { Product, ProductRequest } from "./productTypes";
 
 const backendUrl =
     import.meta.env.VITE_BACKEND_URL ||
-    `product-alb-899356633.us-east-1.elb.amazonaws.com`;
+    `http://test-1863767629.us-east-1.elb.amazonaws.com/`;
 const classifyUrl = import.meta.env.VITE_CLASSIFY_BACKEND_URL;
 
 const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
