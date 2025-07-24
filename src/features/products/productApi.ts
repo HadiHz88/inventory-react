@@ -45,6 +45,22 @@ export const productApi = createApi({
                     : [{ type: "Product", id: "LIST" }],
         }),
 
+        // Query: Search products by query string
+        searchProducts: builder.query<Product[], string>({
+            query: (searchQuery) =>
+                `/products/search?q=${encodeURIComponent(searchQuery)}`,
+            providesTags: (result) =>
+                result
+                    ? [
+                          ...result.map(({ id }) => ({
+                              type: "Product" as const,
+                              id,
+                          })),
+                          { type: "Product", id: "SEARCH" },
+                      ]
+                    : [{ type: "Product", id: "SEARCH" }],
+        }),
+
         // Query: Fetch a single product by ID
         getProductById: builder.query<Product, number>({
             query: (id) => `/products/${id}`,
@@ -120,6 +136,7 @@ export const productApi = createApi({
 // Export hooks for usage in functional components
 export const {
     useGetProductsQuery,
+    useSearchProductsQuery,
     useGetProductByIdQuery,
     useAddProductMutation,
     useDeleteProductMutation,
